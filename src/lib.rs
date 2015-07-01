@@ -44,30 +44,32 @@ impl Beta {
 
         dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
 
-        let var_w = (0..nscale).map(|k| {
-            let i = ncoarse * (1 << k);
-            let j = ncoarse * (1 << (k + 1));
-            mean_square(&data[i..j])
+        let var = (0..(nscale + 1)).map(|i| {
+            let range = if i == 0 {
+                0..ncoarse
+            } else {
+                (ncoarse * (1 << (i - 1)))..(ncoarse * (1 << i))
+            };
+            mean_square(&data[range])
         }).collect::<Vec<_>>();
 
-        let data = &data[0..ncoarse];
-
-        let mu = statistics::mean(data);
-        let sd = statistics::variance(data).sqrt();
+        let (mu, sd) = {
+            let data = &data[0..ncoarse];
+            (statistics::mean(data), statistics::variance(data).sqrt())
+        };
 
         let mut p = Vec::with_capacity(nscale);
-        p.push(0.5 * (mean_square(data) / var_w[0] - 1.0));
-        if p[0] <= 0.0 {
-            raise!("cannot fit the data");
-        }
-
-        for i in 0..(nscale - 1) {
-            let eta = var_w[i] / var_w[i + 1];
-            let pr = eta * 0.5 * (p[i] + 1.0) - 0.5;
-            p.push(pr);
-            if p[i + 1] <= 0.0 {
-                raise!("cannot fit the data");
+        for i in 0..nscale {
+            let eta = var[i] / var[i + 1];
+            let alpha = if i == 0 {
+                0.5 * eta - 0.5
+            } else {
+                0.5 * eta * (p[i - 1] + 1.0) - 0.5
+            };
+            if alpha <= 0.0 {
+                raise!("cannot fit the beta model to the data");
             }
+            p.push(alpha);
         }
 
         Ok(Beta { p: p, mu: mu, sd: sd })
