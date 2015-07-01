@@ -20,7 +20,10 @@ extern crate statistics;
 use probability::generator::Generator;
 use probability::distribution::{Beta, Distribution, Gaussian};
 
+/// An error.
 pub type Error = &'static str;
+
+/// A result.
 pub type Result<T> = std::result::Result<T, Error>;
 
 macro_rules! raise(
@@ -38,7 +41,7 @@ impl Model {
     ///
     /// `ncoarse` is the minimal number of scaling coefficients at the coarsest
     /// level needed for the estimation of the mean and standard deviation of
-    /// the process.
+    /// the underlying process.
     pub fn fit(data: &[f64], ncoarse: usize) -> Result<Model> {
         use statistics::{mean, variance};
 
