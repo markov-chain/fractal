@@ -66,32 +66,22 @@ impl Beta {
 
         dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
 
-        let var = (0..(nscale + 1)).map(|i| {
-            let range = if i == 0 {
-                0..ncoarse
-            } else {
-                (ncoarse * (1 << (i - 1)))..(ncoarse * (1 << i))
-            };
-            mean_square(&data[range])
-        }).collect::<Vec<_>>();
-
-        let (mu, sd) = {
+        let (mu, sd, mut var) = {
             let data = &data[0..ncoarse];
-            (statistics::mean(data), statistics::variance(data).sqrt())
+            (statistics::mean(data), statistics::variance(data).sqrt(), mean_square(data))
         };
 
         let mut betas = Vec::with_capacity(nscale);
+        let mut beta = 0.0;
         for i in 0..nscale {
-            let eta = var[i] / var[i + 1];
-            let beta = if i == 0 {
-                0.5 * eta - 0.5
-            } else {
-                0.5 * eta * (betas[i - 1] + 1.0) - 0.5
-            };
+            let range = (ncoarse * (1 << i))..(ncoarse * (1 << (i + 1)));
+            let new_var = mean_square(&data[range]);
+            beta = 0.5 * (var / new_var) * (beta + 1.0) - 0.5;
             if beta <= 0.0 {
                 raise!("the model is not appropriate for the data");
             }
             betas.push(beta);
+            var = new_var;
         }
 
         Ok(Beta { betas: betas, mu: mu, sd: sd })
