@@ -21,6 +21,6 @@ synthesis of positive-valued, long-range-dependent processes.
 
 [version-img]: https://img.shields.io/crates/v/fractal.svg
 [version-url]: https://crates.io/crates/fractal
-[status-img]: https://travis-ci.org/stainless-steel/fractal.svg?branch=master
-[status-url]: https://travis-ci.org/stainless-steel/fractal
-[doc]: https://stainless-steel.github.io/fractal
+[status-img]: https://travis-ci.org/markov-chain/fractal.svg?branch=master
+[status-url]: https://travis-ci.org/markov-chain/fractal
+[doc]: https://markov-chain.github.io/fractal
