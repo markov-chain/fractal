@@ -18,7 +18,7 @@ extern crate probability;
 extern crate statistics;
 
 use probability::generator::Generator;
-use probability::distribution::{self, Distribution};
+use probability::distribution::{Beta, Distribution, Gaussian};
 
 pub type Error = &'static str;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -27,26 +27,21 @@ macro_rules! raise(
     ($message:expr) => (return Err($message));
 );
 
-/// A model.
-pub trait Model {
-    /// Draw a sample.
-    fn sample<G>(&self, &mut G) -> Result<Vec<f64>> where G: Generator;
-}
-
 /// A beta model.
-pub struct Beta {
-    betas: Vec<f64>,
-    mu: f64,
-    sd: f64,
+pub struct Model {
+    gaussian: Gaussian,
+    betas: Vec<Beta>,
 }
 
-impl Beta {
+impl Model {
     /// Fit a multifractal wavelet model with beta-distributed multipliers.
     ///
     /// `ncoarse` is the minimal number of scaling coefficients at the coarsest
     /// level needed for the estimation of the mean and standard deviation of
     /// the process.
-    pub fn fit(data: &[f64], ncoarse: usize) -> Result<Beta> {
+    pub fn fit(data: &[f64], ncoarse: usize) -> Result<Model> {
+        use statistics::{mean, variance};
+
         if ncoarse == 0 {
             raise!("`ncoarse` should be positive");
         }
@@ -66,9 +61,9 @@ impl Beta {
 
         dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
 
-        let (mu, sd, mut var) = {
+        let (gaussian, mut var) = {
             let data = &data[0..ncoarse];
-            (statistics::mean(data), statistics::variance(data).sqrt(), mean_square(data))
+            (Gaussian::new(mean(data), variance(data).sqrt()), mean_square(data))
         };
 
         let mut betas = Vec::with_capacity(nscale);
@@ -80,34 +75,31 @@ impl Beta {
             if beta <= 0.0 {
                 raise!("the model is not appropriate for the data");
             }
-            betas.push(beta);
+            betas.push(Beta::new(beta, beta, -1.0, 1.0));
             var = new_var;
         }
 
-        Ok(Beta { betas: betas, mu: mu, sd: sd })
+        Ok(Model { gaussian: gaussian, betas: betas })
     }
-}
 
-impl Model for Beta {
-    fn sample<G>(&self, generator: &mut G) -> Result<Vec<f64>> where G: Generator {
+    /// Draw a sample.
+    pub fn sample<G>(&self, generator: &mut G) -> Result<Vec<f64>> where G: Generator {
         let nscale = self.betas.len();
 
         let mut data = Vec::with_capacity(1 << nscale);
         unsafe { data.set_len(1 << nscale) };
 
-        let gaussian = distribution::Gaussian::new(self.mu, self.sd);
         let scale = 0.5f64.powf(nscale as f64 / 2.0);
-        let z = scale * gaussian.sample(generator);
+        let z = scale * self.gaussian.sample(generator);
         if z < 0.0 {
             raise!("the model is not appropriate for the data");
         }
         data[0] = z;
 
         for i in 0..nscale {
-            let beta = distribution::Beta::new(self.betas[i], self.betas[i], -1.0, 1.0);
             for j in (0..(1 << i)).rev() {
                 let x = data[j];
-                let a = beta.sample(generator);
+                let a = self.betas[i].sample(generator);
                 data[2 * j + 0] = (1.0 + a) * x;
                 data[2 * j + 1] = (1.0 - a) * x;
             }
@@ -127,7 +119,7 @@ mod tests {
     use assert;
     use probability::generator;
 
-    use {Beta, Model};
+    use Model;
 
     #[test]
     fn fit() {
@@ -148,13 +140,13 @@ mod tests {
             1.889550150325445e-01, 6.867754333653150e-01, 1.835111557372697e-01,
         ];
 
-        let model = Beta::fit(&data, 5).unwrap();
+        let model = Model::fit(&data, 5).unwrap();
 
-        assert::close(&model.betas, &[
+        assert::close(&model.betas.iter().map(|beta| beta.beta()).collect::<Vec<_>>(), &[
             1.635153583946054e+01, 2.793188701574629e+00, 3.739374677617142e+00,
         ], 1e-14);
-        assert::close(&[model.mu], &[1.184252871226982e+00], 1e-14);
-        assert::close(&[model.sd], &[4.466592147518644e-01], 1e-14);
+        assert::close(&[model.gaussian.mu()], &[1.184252871226982e+00], 1e-14);
+        assert::close(&[model.gaussian.sigma()], &[4.466592147518644e-01], 1e-14);
     }
 
     #[test]
@@ -176,7 +168,7 @@ mod tests {
             9.340106842291830e-01, 1.299062084737301e-01, 5.688236608721927e-01,
         ];
 
-        let model = Beta::fit(&data, 5).unwrap();
+        let model = Model::fit(&data, 5).unwrap();
         let data = model.sample(&mut generator::default()).unwrap();
 
         assert_eq!(data.len(), 8);
