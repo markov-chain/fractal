@@ -12,6 +12,7 @@ synthesis of positive-valued, long-range-dependent processes."""
 
 [dependencies]
 dwt = "*"
+probability = "*"
 
 [dev-dependencies]
 assert = "*"
