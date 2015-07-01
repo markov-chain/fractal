@@ -3,29 +3,86 @@ extern crate assert;
 
 extern crate dwt;
 extern crate probability;
+extern crate statistics;
 
 pub type Error = &'static str;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub struct Model {
-    p: Vec<f64>,
-    mu: f64,
-    sd: f64,
+macro_rules! raise(
+    ($message:expr) => (return Err($message));
+);
+
+/// A beta model.
+pub struct Beta {
+    pub p: Vec<f64>,
+    pub mu: f64,
+    pub sd: f64,
 }
 
-impl Model {
-    pub fn fit(_: &[f64]) -> Result<Model> {
-        let p = vec![];
-        let mu = 0.0;
-        let sd = 0.0;
-        Ok(Model { p: p, mu: mu, sd: sd })
+impl Beta {
+    /// Fit a multifractal wavelet model with beta-distributed multipliers.
+    ///
+    /// `m` is the minimal number of scaling coefficients at the coarsest level
+    /// that should be used for the estimation of the statistics of the wavelet
+    /// coefficients.
+    pub fn fit(data: &[f64], m: usize) -> Result<Beta> {
+        if m == 0 {
+            raise!("`m` should be positive");
+        }
+
+        let n = data.len();
+        let nscale = {
+            let nscale = (n as f64 / m as f64).log2().floor();
+            if nscale < 1.0 {
+                raise!("`m` is too high (not enough data)");
+            }
+            nscale as usize
+        };
+        let ncoarse = (n as f64 / (1 << nscale) as f64).floor() as usize;
+
+        let mut data = (&data[0..(ncoarse * (1 << nscale))]).to_vec();
+
+        dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
+
+        let var_w = (0..nscale).map(|k| {
+            let i = ncoarse * (1 << k);
+            let j = ncoarse * (1 << (k + 1));
+            mean_square(&data[i..j])
+        }).collect::<Vec<_>>();
+
+        let data = &data[0..ncoarse];
+
+        let mu = statistics::mean(data);
+        let sd = statistics::variance(data).sqrt();
+
+        let mut p = Vec::with_capacity(nscale);
+        p.push(0.5 * (mean_square(data) / var_w[0] - 1.0));
+        if p[0] <= 0.0 {
+            raise!("cannot fit the data");
+        }
+
+        for i in 0..(nscale - 1) {
+            let eta = var_w[i] / var_w[i + 1];
+            let pr = eta * 0.5 * (p[i] + 1.0) - 0.5;
+            p.push(pr);
+            if p[i + 1] <= 0.0 {
+                raise!("cannot fit the data");
+            }
+        }
+
+        Ok(Beta { p: p, mu: mu, sd: sd })
     }
+}
+
+#[inline]
+fn mean_square(data: &[f64]) -> f64 {
+    &data.iter().fold(0.0, |sum, &x| sum + x * x) / data.len() as f64
 }
 
 #[cfg(test)]
 mod tests {
     use assert;
-    use Model;
+    use Beta;
 
     #[test]
     fn fit() {
@@ -46,12 +103,12 @@ mod tests {
             1.889550150325445e-01, 6.867754333653150e-01, 1.835111557372697e-01,
         ];
 
-        let model = Model::fit(&data).unwrap();
+        let model = Beta::fit(&data, 5).unwrap();
 
         assert::close(&model.p, &[
             1.635153583946054e+01, 2.793188701574629e+00, 3.739374677617142e+00,
-        ], 1e-15);
-        assert::close(&[model.mu], &[1.184252871226982e+00], 1e-15);
-        assert::close(&[model.sd], &[4.466592147518644e-01], 1e-15);
+        ], 1e-14);
+        assert::close(&[model.mu], &[1.184252871226982e+00], 1e-14);
+        assert::close(&[model.sd], &[4.466592147518644e-01], 1e-14);
     }
 }
