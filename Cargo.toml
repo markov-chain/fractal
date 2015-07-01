@@ -1,0 +1,17 @@
+[package]
+name = "fractal"
+version = "0.0.1"
+authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/stainless-steel/fractal"
+homepage = "https://github.com/stainless-steel/fractal"
+documentation = "https://stainless-steel.github.io/fractal"
+description = """
+The package provides a multiscale modeling framework for the analysis and
+synthesis of positive-valued, long-range-dependent processes."""
+
+[dependencies]
+dwt = "*"
+
+[dev-dependencies]
+assert = "*"
