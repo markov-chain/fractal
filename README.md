@@ -7,8 +7,8 @@ synthesis of positive-valued, long-range-dependent processes.
 
 ## References
 
-1. R. H. Riedi, M. Crouse, V. Ribeiro, and R. Baraniuk, “A multifractal wavelet
-   model with application to network traffic,” Information Theory, IEEE
+1. R. H. Riedi, M. Crouse, V. Ribeiro, and R. Baraniuk, “[A multifractal wavelet
+   model with application to network traffic][1],” Information Theory, IEEE
    Transactions on, vol. 45, no. 3, pp. 992–1018, Apr 1999.
 
 ## Contributing
@@ -16,6 +16,8 @@ synthesis of positive-valued, long-range-dependent processes.
 1. Fork the project.
 2. Implement your idea.
 3. Open a pull request.
+
+[1]: http://dx.doi.org/10.1109/18.761337
 
 [version-img]: https://img.shields.io/crates/v/fractal.svg
 [version-url]: https://crates.io/crates/fractal
