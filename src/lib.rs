@@ -19,8 +19,9 @@ extern crate dwt;
 extern crate probability;
 extern crate statistics;
 
+use probability::distribution::Beta as Pearson;
+use probability::distribution::{Distribution, Gaussian};
 use probability::generator::Generator;
-use probability::distribution::{Beta, Distribution, Gaussian};
 
 /// An error.
 pub type Error = &'static str;
@@ -32,19 +33,19 @@ macro_rules! raise(
     ($message:expr) => (return Err($message));
 );
 
-/// A beta model.
-pub struct Model {
+/// A multifractal wavelet model with beta-distributed multipliers.
+pub struct Beta {
     gaussian: Gaussian,
-    betas: Vec<Beta>,
+    betas: Vec<Pearson>,
 }
 
-impl Model {
-    /// Fit a multifractal wavelet model with beta-distributed multipliers.
+impl Beta {
+    /// Fit a model to the data.
     ///
     /// `ncoarse` is the minimal number of scaling coefficients at the coarsest
     /// level needed for the estimation of the mean and standard deviation of
     /// the underlying process.
-    pub fn fit(data: &[f64], ncoarse: usize) -> Result<Model> {
+    pub fn fit(data: &[f64], ncoarse: usize) -> Result<Beta> {
         use statistics::{mean, variance};
 
         if ncoarse == 0 {
@@ -80,11 +81,11 @@ impl Model {
             if beta <= 0.0 {
                 raise!("the model is not appropriate for the data");
             }
-            betas.push(Beta::new(beta, beta, -1.0, 1.0));
+            betas.push(Pearson::new(beta, beta, -1.0, 1.0));
             var = new_var;
         }
 
-        Ok(Model { gaussian: gaussian, betas: betas })
+        Ok(Beta { gaussian: gaussian, betas: betas })
     }
 
     /// Draw a sample.
@@ -124,7 +125,7 @@ mod tests {
     use assert;
     use probability::generator;
 
-    use Model;
+    use Beta;
 
     #[test]
     fn fit() {
@@ -145,7 +146,7 @@ mod tests {
             1.889550150325445e-01, 6.867754333653150e-01, 1.835111557372697e-01,
         ];
 
-        let model = Model::fit(&data, 5).unwrap();
+        let model = Beta::fit(&data, 5).unwrap();
 
         assert::close(&model.betas.iter().map(|beta| beta.beta()).collect::<Vec<_>>(), &[
             1.635153583946054e+01, 2.793188701574629e+00, 3.739374677617142e+00,
@@ -173,7 +174,7 @@ mod tests {
             9.340106842291830e-01, 1.299062084737301e-01, 5.688236608721927e-01,
         ];
 
-        let model = Model::fit(&data, 5).unwrap();
+        let model = Beta::fit(&data, 5).unwrap();
         let data = model.sample(&mut generator::default()).unwrap();
 
         assert_eq!(data.len(), 8);
