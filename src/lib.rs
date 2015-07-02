@@ -17,11 +17,12 @@ extern crate assert;
 
 extern crate dwt;
 extern crate probability;
+extern crate random;
 extern crate statistics;
 
 use probability::distribution::Beta as Pearson;
 use probability::distribution::{Distribution, Gaussian};
-use probability::generator::Generator;
+use random::Source;
 
 /// An error.
 pub type Error = &'static str;
@@ -89,14 +90,14 @@ impl Beta {
     }
 
     /// Draw a sample.
-    pub fn sample<G>(&self, generator: &mut G) -> Result<Vec<f64>> where G: Generator {
+    pub fn sample<S>(&self, source: &mut S) -> Result<Vec<f64>> where S: Source {
         let nscale = self.betas.len();
 
         let mut data = Vec::with_capacity(1 << nscale);
         unsafe { data.set_len(1 << nscale) };
 
         let scale = 0.5f64.powf(nscale as f64 / 2.0);
-        let z = scale * self.gaussian.sample(generator);
+        let z = scale * self.gaussian.sample(source);
         if z < 0.0 {
             raise!("the model is not appropriate for the data");
         }
@@ -105,7 +106,7 @@ impl Beta {
         for i in 0..nscale {
             for j in (0..(1 << i)).rev() {
                 let x = data[j];
-                let a = self.betas[i].sample(generator);
+                let a = self.betas[i].sample(source);
                 data[2 * j + 0] = (1.0 + a) * x;
                 data[2 * j + 1] = (1.0 - a) * x;
             }
@@ -123,7 +124,7 @@ fn mean_square(data: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use assert;
-    use probability::generator;
+    use random;
 
     use Beta;
 
@@ -175,7 +176,7 @@ mod tests {
         ];
 
         let model = Beta::fit(&data, 5).unwrap();
-        let data = model.sample(&mut generator::default()).unwrap();
+        let data = model.sample(&mut random::default()).unwrap();
 
         assert_eq!(data.len(), 8);
     }
