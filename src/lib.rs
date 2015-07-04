@@ -23,15 +23,16 @@ extern crate statistics;
 use probability::distribution::Beta as Pearson;
 use probability::distribution::{Distribution, Gaussian};
 use random::Source;
+use std::{error, fmt};
 
 /// An error.
-pub type Error = &'static str;
+pub struct Error(pub &'static str);
 
 /// A result.
 pub type Result<T> = std::result::Result<T, Error>;
 
 macro_rules! raise(
-    ($message:expr) => (return Err($message));
+    ($message:expr) => (return Err(Error($message)));
 );
 
 /// A multifractal wavelet model with beta-distributed multipliers.
@@ -113,6 +114,27 @@ impl Beta {
         }
 
         Ok(data)
+    }
+}
+
+impl error::Error for Error {
+    #[inline]
+    fn description(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for Error {
+    #[inline]
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(formatter)
     }
 }
 
