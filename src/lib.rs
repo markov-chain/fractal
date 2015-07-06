@@ -41,53 +41,48 @@ pub struct Beta {
     betas: Vec<Pearson>,
 }
 
+macro_rules! scales(
+    ($number:expr) => (
+        if $number == 0 {
+            raise!("the number of scales should be positive");
+        }
+    );
+);
+
+macro_rules! blocks(
+    ($number:expr) => (
+        if $number == 0 {
+            raise!("the number of blocks should be at least two");
+        }
+    );
+);
+
 impl Beta {
-    /// Fit a model to the data.
+    /// Fit the model to the data.
     ///
-    /// `ncoarse` is the minimal number of scaling coefficients at the coarsest
-    /// level needed for the estimation of the mean and standard deviation of
-    /// the underlying process.
-    pub fn fit(data: &[f64], ncoarse: usize) -> Result<Beta> {
-        use statistics::{mean, variance};
+    /// The number of points used for the analysis is `blocks × 2^scales`. The
+    /// parameter `blocks` should be at least two, and it corresponds to the
+    /// number of points used for the estimation of the mean and standard
+    /// deviation of the underlying process. The parameter `scales` should be at
+    /// least one, and it corresponds to the number of scales for which the data
+    /// are analyzed. The number `scales` also dictates the size of a sample
+    /// drawn by `sample`, namely, each sample contains `2^scales` elements.
+    pub fn new(data: &[f64], blocks: usize) -> Result<Beta> {
+        blocks!(blocks);
+        let scales = (data.len() as f64 / blocks as f64).log2().floor() as usize;
+        scales!(scales);
+        fit(data, blocks, scales)
+    }
 
-        if ncoarse == 0 {
-            raise!("`ncoarse` should be positive");
-        }
-
-        let n = data.len();
-        let nscale = {
-            let nscale = (n as f64 / ncoarse as f64).log2().floor();
-            if nscale < 1.0 {
-                raise!("`ncoarse` is too high for the given amount of data");
-            }
-            nscale as usize
-        };
-        let ncoarse = (n as f64 / (1 << nscale) as f64).floor() as usize;
-
-        let n = ncoarse * (1 << nscale);
-        let mut data = (&data[0..n]).to_vec();
-
-        dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
-
-        let (gaussian, mut ms) = {
-            let data = &data[0..ncoarse];
-            (Gaussian::new(mean(data), variance(data).sqrt()), mean_square(data))
-        };
-
-        let mut betas = Vec::with_capacity(nscale);
-        let mut beta = 0.0;
-        for i in 0..nscale {
-            let range = (ncoarse * (1 << i))..(ncoarse * (1 << (i + 1)));
-            let new_ms = mean_square(&data[range]);
-            beta = 0.5 * (ms / new_ms) * (beta + 1.0) - 0.5;
-            if beta <= 0.0 {
-                raise!("the model is not appropriate for the data");
-            }
-            betas.push(Pearson::new(beta, beta, -1.0, 1.0));
-            ms = new_ms;
-        }
-
-        Ok(Beta { gaussian: gaussian, betas: betas })
+    /// Fit the model to the data with a specific number of scales.
+    ///
+    /// The function is identical to `new` except for specifying the number of
+    /// scales instead of the number of blocks.
+    pub fn with_scales(data: &[f64], scales: usize) -> Result<Beta> {
+        scales!(scales);
+        let blocks = (data.len() as f64 / (1 << scales) as f64).floor() as usize;
+        blocks!(blocks);
+        fit(data, blocks, scales)
     }
 
     /// Draw a sample.
@@ -138,6 +133,30 @@ impl fmt::Display for Error {
     }
 }
 
+fn fit(data: &[f64], blocks: usize, scales: usize) -> Result<Beta> {
+    use statistics::{mean, variance};
+
+    let mut data = (&data[0..(blocks * (1 << scales))]).to_vec();
+    dwt::forward(&mut data, &dwt::wavelet::Haar::new(), scales);
+
+    let gaussian = Gaussian::new(mean(&data[0..blocks]), variance(&data[0..blocks]).sqrt());
+
+    let mut beta = 0.0;
+    let mut ms = mean_square(&data[0..blocks]);
+    let mut betas = Vec::with_capacity(scales);
+    for i in 0..scales {
+        let new_ms = mean_square(&data[(blocks * (1 << i))..(blocks * (1 << (i + 1)))]);
+        beta = 0.5 * (ms / new_ms) * (beta + 1.0) - 0.5;
+        if beta <= 0.0 {
+            raise!("the model is not appropriate for the data");
+        }
+        betas.push(Pearson::new(beta, beta, -1.0, 1.0));
+        ms = new_ms;
+    }
+
+    Ok(Beta { gaussian: gaussian, betas: betas })
+}
+
 #[inline]
 fn mean_square(data: &[f64]) -> f64 {
     &data.iter().fold(0.0, |sum, &x| sum + x * x) / data.len() as f64
@@ -151,7 +170,7 @@ mod tests {
     use Beta;
 
     #[test]
-    fn fit() {
+    fn new() {
         let data = [
             4.018080337519417e-01, 7.596669169084191e-02, 2.399161535536580e-01,
             1.233189348351655e-01, 1.839077882824167e-01, 2.399525256649028e-01,
@@ -169,7 +188,7 @@ mod tests {
             1.889550150325445e-01, 6.867754333653150e-01, 1.835111557372697e-01,
         ];
 
-        let model = Beta::fit(&data, 5).unwrap();
+        let model = Beta::new(&data, 5).unwrap();
 
         assert::close(&model.betas.iter().map(|beta| beta.beta()).collect::<Vec<_>>(), &[
             1.635153583946054e+01, 2.793188701574629e+00, 3.739374677617142e+00,
@@ -197,7 +216,7 @@ mod tests {
             9.340106842291830e-01, 1.299062084737301e-01, 5.688236608721927e-01,
         ];
 
-        let model = Beta::fit(&data, 5).unwrap();
+        let model = Beta::with_scales(&data, 3).unwrap();
         let data = model.sample(&mut random::default()).unwrap();
 
         assert_eq!(data.len(), 8);
