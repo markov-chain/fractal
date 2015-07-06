@@ -69,7 +69,7 @@ impl Beta {
 
         dwt::forward(&mut data, &dwt::wavelet::Haar::new(), nscale);
 
-        let (gaussian, mut var) = {
+        let (gaussian, mut ms) = {
             let data = &data[0..ncoarse];
             (Gaussian::new(mean(data), variance(data).sqrt()), mean_square(data))
         };
@@ -78,13 +78,13 @@ impl Beta {
         let mut beta = 0.0;
         for i in 0..nscale {
             let range = (ncoarse * (1 << i))..(ncoarse * (1 << (i + 1)));
-            let new_var = mean_square(&data[range]);
-            beta = 0.5 * (var / new_var) * (beta + 1.0) - 0.5;
+            let new_ms = mean_square(&data[range]);
+            beta = 0.5 * (ms / new_ms) * (beta + 1.0) - 0.5;
             if beta <= 0.0 {
                 raise!("the model is not appropriate for the data");
             }
             betas.push(Pearson::new(beta, beta, -1.0, 1.0));
-            var = new_var;
+            ms = new_ms;
         }
 
         Ok(Beta { gaussian: gaussian, betas: betas })
