@@ -1,6 +1,6 @@
 [package]
 name = "fractal"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/markov-chain/fractal"
@@ -12,7 +12,7 @@ synthesis of positive-valued, long-range-dependent processes."""
 
 [dependencies]
 dwt = "*"
-probability = "*"
+probability = "0.12"
 random = "*"
 statistics = "*"
 

@@ -21,7 +21,7 @@ extern crate random;
 extern crate statistics;
 
 use probability::distribution::Beta as Pearson;
-use probability::distribution::{Distribution, Gaussian};
+use probability::distribution::{Gaussian, Sample};
 use random::Source;
 use std::{error, fmt};
 
