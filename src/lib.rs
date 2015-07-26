@@ -193,8 +193,8 @@ mod tests {
         assert::close(&model.betas.iter().map(|beta| beta.beta()).collect::<Vec<_>>(), &[
             1.635153583946054e+01, 2.793188701574629e+00, 3.739374677617142e+00,
         ], 1e-14);
-        assert::close(&[model.gaussian.mu()], &[1.184252871226982e+00], 1e-14);
-        assert::close(&[model.gaussian.sigma()], &[4.466592147518644e-01], 1e-14);
+        assert::close(model.gaussian.mu(), 1.184252871226982e+00, 1e-14);
+        assert::close(model.gaussian.sigma(), 4.466592147518644e-01, 1e-14);
     }
 
     #[test]
