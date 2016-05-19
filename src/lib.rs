@@ -17,12 +17,11 @@ extern crate assert;
 
 extern crate dwt;
 extern crate probability;
-extern crate random;
 extern crate statistics;
 
 use probability::distribution::Beta as Pearson;
 use probability::distribution::{Gaussian, Sample};
-use random::Source;
+use probability::source::Source;
 use std::{error, fmt};
 
 /// An error.
@@ -165,7 +164,7 @@ fn mean_square(data: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use assert;
-    use random;
+    use probability::source;
 
     use Beta;
 
@@ -217,7 +216,7 @@ mod tests {
         ];
 
         let model = Beta::with_scales(&data, 3).unwrap();
-        let data = model.sample(&mut random::default()).unwrap();
+        let data = model.sample(&mut source::default()).unwrap();
 
         assert_eq!(data.len(), 8);
     }
