@@ -1,6 +1,6 @@
 [package]
 name = "fractal"
-version = "0.5.2"
+version = "0.5.3"
 license = "MIT"
 authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
 description = """
@@ -16,4 +16,4 @@ probability = "0.14"
 statistics = "0.3"
 
 [dev-dependencies]
-assert = "0.6"
+assert = "0.7"
