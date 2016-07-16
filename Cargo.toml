@@ -1,6 +1,6 @@
 [package]
 name = "fractal"
-version = "0.6.0"
+version = "0.6.1"
 license = "Apache-2.0/MIT"
 authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
 description = """
@@ -12,7 +12,7 @@ repository = "https://github.com/markov-chain/fractal"
 
 [dependencies]
 dwt = "0.3"
-probability = "0.14"
+probability = "0.15"
 statistics = "0.3"
 
 [dev-dependencies]
