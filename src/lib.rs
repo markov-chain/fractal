@@ -133,10 +133,12 @@ impl fmt::Display for Error {
 }
 
 fn fit(data: &[f64], blocks: usize, scales: usize) -> Result<Beta> {
+    use dwt::{Operation, Transform};
+    use dwt::wavelet::Haar;
     use statistics::{mean, variance};
 
     let mut data = (&data[0..(blocks * (1 << scales))]).to_vec();
-    dwt::forward(&mut data, &dwt::wavelet::Haar::new(), scales);
+    data.transform(Operation::Forward, &Haar::new(), scales);
 
     let gaussian = Gaussian::new(mean(&data[0..blocks]), variance(&data[0..blocks]).sqrt());
 
