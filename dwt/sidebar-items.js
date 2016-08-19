@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Operation","A transform operation."]],"fn":[["transform","Perform the transform."]],"mod":[["wavelet","Wavelets."]],"trait":[["Transform","The transform."]]});

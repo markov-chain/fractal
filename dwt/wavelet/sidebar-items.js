@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Haar","A Haar wavelet."],["Wavelet","A wavelet."]]});

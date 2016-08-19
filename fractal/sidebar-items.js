@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Beta","A multifractal wavelet model with beta-distributed multipliers."],["Error","An error."]],"type":[["Result","A result."]]});
