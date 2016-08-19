@@ -30,9 +30,7 @@ pub struct Error(pub &'static str);
 /// A result.
 pub type Result<T> = std::result::Result<T, Error>;
 
-macro_rules! raise(
-    ($message:expr) => (return Err(Error($message)));
-);
+macro_rules! raise(($message:expr) => (return Err(Error($message))));
 
 /// A multifractal wavelet model with beta-distributed multipliers.
 pub struct Beta {
@@ -41,19 +39,15 @@ pub struct Beta {
 }
 
 macro_rules! scales(
-    ($number:expr) => (
-        if $number == 0 {
-            raise!("the number of scales should be positive");
-        }
-    );
+    ($number:expr) => (if $number == 0 {
+        raise!("the number of scales should be positive");
+    });
 );
 
 macro_rules! blocks(
-    ($number:expr) => (
-        if $number == 0 {
-            raise!("the number of blocks should be at least two");
-        }
-    );
+    ($number:expr) => (if $number == 0 {
+        raise!("the number of blocks should be at least two");
+    });
 );
 
 impl Beta {
@@ -66,38 +60,35 @@ impl Beta {
     /// least one, and it corresponds to the number of scales for which the data
     /// are analyzed. The number `scales` also dictates the size of a sample
     /// drawn by `sample`, namely, each sample contains `2^scales` elements.
-    pub fn new(data: &[f64], blocks: usize) -> Result<Beta> {
+    pub fn new(data: &[f64], blocks: usize) -> Result<Self> {
         blocks!(blocks);
         let scales = (data.len() as f64 / blocks as f64).log2().floor() as usize;
         scales!(scales);
-        fit(data, blocks, scales)
+        Beta::fit(data, blocks, scales)
     }
 
     /// Fit the model to the data with a specific number of scales.
     ///
     /// The function is identical to `new` except for specifying the number of
     /// scales instead of the number of blocks.
-    pub fn with_scales(data: &[f64], scales: usize) -> Result<Beta> {
+    pub fn with_scales(data: &[f64], scales: usize) -> Result<Self> {
         scales!(scales);
         let blocks = (data.len() as f64 / (1 << scales) as f64).floor() as usize;
         blocks!(blocks);
-        fit(data, blocks, scales)
+        Beta::fit(data, blocks, scales)
     }
 
     /// Draw a sample.
     pub fn sample<S>(&self, source: &mut S) -> Result<Vec<f64>> where S: Source {
         let nscale = self.betas.len();
-
         let mut data = Vec::with_capacity(1 << nscale);
         unsafe { data.set_len(1 << nscale) };
-
         let scale = 0.5f64.powf(nscale as f64 / 2.0);
         let z = scale * self.gaussian.sample(source);
         if z < 0.0 {
             raise!("the model is not appropriate for the data");
         }
         data[0] = z;
-
         for i in 0..nscale {
             for j in (0..(1 << i)).rev() {
                 let x = data[j];
@@ -106,8 +97,30 @@ impl Beta {
                 data[2 * j + 1] = (1.0 - a) * x;
             }
         }
-
         Ok(data)
+    }
+
+    fn fit(data: &[f64], blocks: usize, scales: usize) -> Result<Self> {
+        use dwt::{Operation, Transform};
+        use dwt::wavelet::Haar;
+        use statistics::{mean, variance};
+
+        let mut data = (&data[0..(blocks * (1 << scales))]).to_vec();
+        data.transform(Operation::Forward, &Haar::new(), scales);
+        let gaussian = Gaussian::new(mean(&data[0..blocks]), variance(&data[0..blocks]).sqrt());
+        let mut beta = 0.0;
+        let mut ms = mean_square(&data[0..blocks]);
+        let mut betas = Vec::with_capacity(scales);
+        for i in 0..scales {
+            let new_ms = mean_square(&data[(blocks * (1 << i))..(blocks * (1 << (i + 1)))]);
+            beta = 0.5 * (ms / new_ms) * (beta + 1.0) - 0.5;
+            if beta <= 0.0 {
+                raise!("the model is not appropriate for the data");
+            }
+            betas.push(Pearson::new(beta, beta, -1.0, 1.0));
+            ms = new_ms;
+        }
+        Ok(Beta { gaussian: gaussian, betas: betas })
     }
 }
 
@@ -130,32 +143,6 @@ impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(formatter)
     }
-}
-
-fn fit(data: &[f64], blocks: usize, scales: usize) -> Result<Beta> {
-    use dwt::{Operation, Transform};
-    use dwt::wavelet::Haar;
-    use statistics::{mean, variance};
-
-    let mut data = (&data[0..(blocks * (1 << scales))]).to_vec();
-    data.transform(Operation::Forward, &Haar::new(), scales);
-
-    let gaussian = Gaussian::new(mean(&data[0..blocks]), variance(&data[0..blocks]).sqrt());
-
-    let mut beta = 0.0;
-    let mut ms = mean_square(&data[0..blocks]);
-    let mut betas = Vec::with_capacity(scales);
-    for i in 0..scales {
-        let new_ms = mean_square(&data[(blocks * (1 << i))..(blocks * (1 << (i + 1)))]);
-        beta = 0.5 * (ms / new_ms) * (beta + 1.0) - 0.5;
-        if beta <= 0.0 {
-            raise!("the model is not appropriate for the data");
-        }
-        betas.push(Pearson::new(beta, beta, -1.0, 1.0));
-        ms = new_ms;
-    }
-
-    Ok(Beta { gaussian: gaussian, betas: betas })
 }
 
 #[inline]
