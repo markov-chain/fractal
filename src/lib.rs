@@ -30,23 +30,23 @@ pub struct Error(pub &'static str);
 /// A result.
 pub type Result<T> = std::result::Result<T, Error>;
 
-macro_rules! raise(($message:expr) => (return Err(Error($message))));
-
 /// A multifractal wavelet model with beta-distributed multipliers.
 pub struct Beta {
     gaussian: Gaussian,
     betas: Vec<Pearson>,
 }
 
-macro_rules! scales(
-    ($number:expr) => (if $number == 0 {
-        raise!("the number of scales should be positive");
-    });
-);
+macro_rules! raise(($message:expr) => (return Err(Error($message))));
 
 macro_rules! blocks(
     ($number:expr) => (if $number == 0 {
         raise!("the number of blocks should be at least two");
+    });
+);
+
+macro_rules! scales(
+    ($number:expr) => (if $number == 0 {
+        raise!("the number of scales should be positive");
     });
 );
 
