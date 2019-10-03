@@ -6,12 +6,5 @@ rust:
   - beta
   - nightly
 
-after_success:
-  - curl https://markov-chain.github.io/travis/documentation.sh | bash;
-
-env:
-  global:
-    - secure: ZuTlXNboZv0If7p7+RrZOMumYQT32ig+S7vEwJzDrJmR7vEU2NulVjYZbZsGVDVFpm6kJ7id/3nXBmXAD+Ks37UHs2KNdjmvGNwQhBrnXpyO9lH+/7YXnq3clcZciMGTJe3s6O4VA0StgRV26n2xO8/AyGvnsFZbaGCBosYiWqFPxCL66JdeyTVMlWu0dUB9vtEuFqWwqM46cOKy8Q2nWY9Dm1/RxqqpARh+V+PVOXUfDIYjh4pzPgxT7YHMdLVakmOG7rJ1zoiIhixKzNkUrJt5oMRbaM+gizX0Y4EXQewkn9VQmSQv0c9XM4L1ERQ/YDkhTT1ahlXTOEXcU951vjl3UswxPkp9OMmbz6H8c7q41Xsv/KnBeAVuFlKbTKqqoBXq4S88YT1pDn8Rxrw7a3aOE4bSsbI79lvUeAID2B44ginGzjECbU9aqokEJX0yfK+C8n/nAuA1NFRdVAZDM6p4oYBRRzIStP0J8rlVXjfLwK0gtdG0Nu00h/22/EXM7rs3GVhHN/60p30Ik1S6IO0Q9+hLy/VOMZxpwFbYgLpMsxEl5zf56hU/a0B8vCsAY+CGtNVdnDh4lP9dBTtizesYwv2pA5M+qDQ0Z8yN7s52k1gfwTSG6BxfkNIIoLi+3sa92K56D4l5YDKTpcINMEnxA279LiBOh5gRZjjG+LI=
-
 notifications:
   email: false
