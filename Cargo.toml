@@ -9,6 +9,9 @@ synthesis of positive-valued, long-range-dependent processes."""
 documentation = "https://markov-chain.github.io/fractal"
 homepage = "https://github.com/markov-chain/fractal"
 repository = "https://github.com/markov-chain/fractal"
+readme = "README.md"
+categories = ["algorithms", "science"]
+keywords = ["traffic-simulation", "wavelet"]
 
 [dependencies]
 dwt = "0.5"
